@@ -1,0 +1,23 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "users": {
+      "$uid": {
+        "points": {
+          ".read": "auth != null && auth.uid == $uid",
+          ".write": false
+        }
+      }
+    },
+    "pointRequests": {
+      "$uid": {
+        ".read": "auth != null && (auth.uid == $uid || auth.token.admin == true)",
+        "$requestId": {
+          ".write": "auth != null && auth.uid == $uid && !data.exists() && newData.child('status').val() == 'pending' && newData.child('amount').isNumber() && newData.child('amount').val() >= 1 && newData.child('amount').val() <= 100",
+          ".validate": "newData.hasChildren(['amount', 'status', 'createdAt'])"
+        }
+      }
+    }
+  }
+}

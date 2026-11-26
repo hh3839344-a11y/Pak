@@ -1,0 +1,14 @@
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { getDatabase, ref, onValue, push, set } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+import { firebaseConfig } from "./firebase-config.js";
+const app=initializeApp(firebaseConfig), auth=getAuth(app), db=getDatabase(app);
+const $=id=>document.getElementById(id); let user=null, stopPoints=null, stopHistory=null;
+$("loginBtn").onclick=async()=>{try{await signInWithEmailAndPassword(auth,$("email").value,$("password").value);$("authMsg").textContent="Berhasil masuk."}catch(e){$("authMsg").textContent=e.message}};
+$("registerBtn").onclick=async()=>{try{await createUserWithEmailAndPassword(auth,$("email").value,$("password").value);$("authMsg").textContent="Akun berhasil dibuat."}catch(e){$("authMsg").textContent=e.message}};
+$("logoutBtn").onclick=()=>signOut(auth);
+$("requestBtn").onclick=async()=>{if(!user)return;const amount=Number($("amount").value);if(!Number.isInteger(amount)||amount<1||amount>100){$("requestMsg").textContent="Masukkan 1–100 poin.";return;}try{const r=push(ref(db,`pointRequests/${user.uid}`));await set(r,{amount,status:"pending",createdAt:Date.now()});$("requestMsg").textContent="Permintaan dikirim. Tunggu pemeriksaan admin.";}catch(e){$("requestMsg").textContent="Gagal: "+e.message;}};
+onAuthStateChanged(auth,u=>{user=u;$("authPanel").classList.toggle("hidden",!!u);$("userPanel").classList.toggle("hidden",!u);if(stopPoints)stopPoints();if(stopHistory)stopHistory();if(!u)return;
+stopPoints=onValue(ref(db,`users/${u.uid}/points`),s=>$("points").textContent=String(s.val()||0));
+stopHistory=onValue(ref(db,`pointRequests/${u.uid}`),s=>{const d=s.val()||{};const rows=Object.entries(d).reverse();$("history").innerHTML=rows.length?rows.map(([k,v])=>`<div class="p-3 rounded bg-slate-800 flex justify-between"><span>${v.amount} poin · ${new Date(v.createdAt).toLocaleString("id-ID")}</span><b>${v.status}</b></div>`).join(""):"Belum ada permintaan.";});
+});
